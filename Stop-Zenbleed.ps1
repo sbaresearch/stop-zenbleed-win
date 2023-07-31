@@ -158,11 +158,13 @@ try {
                 for ($Processor = 0; $Processor -lt $ProcessorCount; $Processor++) {
                     $MyProc.ProcessorAffinity = 1 -shl $Processor
 
+                    $Success = $false
                     for ($Try = 0; $Try -lt 10; $Try++) {
                         $Value = ReadMsr -Device $Device -Register $Register
 
                         if ((($Value -shr 9) -band 1) -eq 1) {
                             Write-Output ("[+] Fix is applied on processor {0} (MSR 0x{1:X}=0x{2:X})" -f ($Processor + 1), $Register, $Value)
+                            $Success = $true
                             break;
                         }
 
@@ -170,6 +172,10 @@ try {
                         $Value = $Value -bor (1 -shl 9)
 
                         WriteMsr -Device $Device -Register $Register -Value $Value
+                    }
+
+                    if (!$Success) {
+                        throw "Applying fix failed on processor {0} even after retries" -f ($Processor + 1)
                     }
                 }
 
@@ -188,4 +194,5 @@ try {
     }
 } catch {
     Write-Output "[!] $_"
+    exit 1
 }
